@@ -1,5 +1,6 @@
 import cv2, mediapipe as mp, keyboard as kb, os, time as t, numpy as np
 from DataAugmentation import dataAugmentaion
+from tqdm import tqdm
 
 class CaptureFrame:
     def __init__(self, Type = None):
@@ -34,6 +35,9 @@ class CaptureFrame:
     ### 반복 수 체크
     cnt = len(os.listdir(f'{trainPath}leftEye/'))//2
     limit = cnt + 150
+
+    ### 프로그레스 바
+    pbar : tqdm
 
     ## 데이터 증강 객체
     DA = dataAugmentaion()
@@ -166,10 +170,10 @@ class CaptureFrame:
     ## 이미지를 저장할 때 Data Augmentation 적용해서 저장하기
     def save(self, Names, inputKey, Frames):
         savePaths = self.savePaths[inputKey]
-        for i, savePath in enumerate(savePaths):
-            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt}{savePath}',Frames[i])
-            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+1}{savePath}', self.DA.augmentationImage(Frames[i]))
-            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+2}{savePath}', self.DA.augmentationImage(Frames[i]))
+        # for i, savePath in enumerate(savePaths):
+        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt}{savePath}',Frames[i])
+        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+1}{savePath}', self.DA.augmentationImage(Frames[i]))
+        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+2}{savePath}', self.DA.augmentationImage(Frames[i]))
     
     def saveFrame(self, Frames):
         ## 현재 입력된 키가 없을 때만 새로운 키 입력 받음
@@ -178,6 +182,7 @@ class CaptureFrame:
                         '4' if kb.is_pressed('4') else None
             if self.key != None:
                 print(f'key Click : {self.key}')
+                self.pbar = tqdm(total = (self.limit - self.cnt))
         else:
             ## 입력된 key가 있다면 저장 실행
             ## 0.1초마다 저장
@@ -191,10 +196,12 @@ class CaptureFrame:
                     ## ROI 이미지 저장
                     self.save(self.frameNames[CalcKey(self.key)],self.key, CalcFrame(self.key,Frames))
                     self.cnt += 3
+                    self.pbar.update(3)
                 else : 
                     ## 정해진 횟수 만큼 저장 하였다면
                     ## count 및 key 초기화
-                    print('end')
+                    os.system('cls')
+                    print('done')
                     self.cnt -= 150
                     self.key = None
                 ## 시간 갱신
