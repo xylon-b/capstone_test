@@ -1,4 +1,4 @@
-import cv2, mediapipe as mp, keyboard as kb, os, time as t, numpy as np
+import cv2, mediapipe as mp, keyboard as kb, os, time as t, numpy as np, traceback, sys
 from DataAugmentation import dataAugmentaion
 from tqdm import tqdm
 
@@ -28,16 +28,18 @@ class CaptureFrame:
     key = None
     ### 데이터 저장 위치
     trainPath = './Train DataSet/'
-    testPath = './Test Image/'
     ### 데이터 저장 Dict
-    frameNames = {0:['leftEye/','rightEye/'], 1:['mouse/'], 2:['mask/']}
+    frameNames = {0:['leftEye/','rightEye/'], 1:['mouth/'], 2:['mask/']}
     savePaths = {'1':['_L_OE.jpg','_R_OE.jpg'],'2':['_L_CE.jpg','_R_CE.jpg'],'3':['_M_CM.jpg'],'4':['_M_OM.jpg'],'5':['_M_MSK.jpg']}
     ### 반복 수 체크
     cnt = len(os.listdir(f'{trainPath}leftEye/'))//2
+    cnt = len(os.listdir(f'{trainPath}mouth/'))//2
     limit = cnt + 150
+    ### 데이터 복구용 cnt
+    backUpCnt = cnt
 
     ### 프로그레스 바
-    pbar : tqdm
+    pbar = tqdm(total = (limit - cnt))
 
     ## 데이터 증강 객체
     DA = dataAugmentaion()
@@ -170,20 +172,52 @@ class CaptureFrame:
     ## 이미지를 저장할 때 Data Augmentation 적용해서 저장하기
     def save(self, Names, inputKey, Frames):
         savePaths = self.savePaths[inputKey]
-        # for i, savePath in enumerate(savePaths):
-        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt}{savePath}',Frames[i])
-        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+1}{savePath}', self.DA.augmentationImage(Frames[i]))
-        #     cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+2}{savePath}', self.DA.augmentationImage(Frames[i]))
+        for i, savePath in enumerate(savePaths):
+            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt}{savePath}',Frames[i])
+            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+1}{savePath}', self.DA.augmentationImage(Frames[i]))
+            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+2}{savePath}', self.DA.augmentationImage(Frames[i]))
     
     def saveFrame(self, Frames):
         ## 현재 입력된 키가 없을 때만 새로운 키 입력 받음
         if self.key == None:
-            self.key = '1' if kb.is_pressed('1') else '2' if kb.is_pressed('2') else '3' if kb.is_pressed('3') else\
-                        '4' if kb.is_pressed('4') else None
+            if kb.is_pressed('ctrl'):
+                self.key = '1' if kb.is_pressed('1') else '2' if kb.is_pressed('2') else '3' if kb.is_pressed('3') else\
+                            '4' if kb.is_pressed('4') else '5' if kb.is_pressed('5') else None
             if self.key != None:
+                os.system('cls')
                 print(f'key Click : {self.key}')
-                self.pbar = tqdm(total = (self.limit - self.cnt))
         else:
+            ## b와 u를 동시에 누르면 촬영 일시 중 지 및 신규 촬영 중이던 데이터 제거
+            # if kb.is_pressed('b') and kb.is_pressed('u'):
+            #     self.key = None
+            #     ### 데이터 삭제 코드
+            #     for i in range(self.backUpCnt, self.cnt):
+            #         print(f'{self.trainPath}leftEye/{i}_L_OE.jpg')
+            #         if os.path.exists(f'{self.trainPath}leftEye/{i}_L_OE.jpg'):
+            #             os.remove(f'{self.trainPath}leftEye/{i}_L_OE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}leftEye/{i}_L_CE.jpg'):
+            #             os.remove(f'{self.trainPath}leftEye/{i}_L_CE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}rightEye/{i}_R_OE.jpg'):
+            #             os.remove(f'{self.trainPath}rightEye/{i}_R_OE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}rightEye/{i}_R_CE.jpg'):
+            #             os.remove(f'{self.trainPath}rightEye/{i}_R_CE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}mouth/{i}_L_OE.jpg'):
+            #             os.remove(f'{self.trainPath}mouth/{i}_L_OE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}mouth/{i}_L_OE.jpg'):
+            #             os.remove(f'{self.trainPath}mouth/{i}_L_OE.jpg')
+
+            #         if os.path.exists(f'{self.trainPath}mask/{i}_L_OE.jpg'):
+            #             os.remove(f'{self.trainPath}leftEye/{i}_L_OE.jpg')
+            #     t.sleep(10)
+            #     self.refresh()
+            #     print('Stopped Process. ==> Removed current data')
+            #     self.cnt = self.backUpCnt
+
             ## 입력된 key가 있다면 저장 실행
             ## 0.1초마다 저장
             if t.time() - self.T >= 0.1:
@@ -197,6 +231,7 @@ class CaptureFrame:
                     self.save(self.frameNames[CalcKey(self.key)],self.key, CalcFrame(self.key,Frames))
                     self.cnt += 3
                     self.pbar.update(3)
+                    self.pbar.set_description(f'Path : {self.trainPath}{self.savePaths[self.key]}')
                 else : 
                     ## 정해진 횟수 만큼 저장 하였다면
                     ## count 및 key 초기화
@@ -208,10 +243,11 @@ class CaptureFrame:
                 self.T = t.time()
 
     def refresh(self):
-        if kb.is_pressed('r'):
-            self.cnt = len(os.listdir(f'{self.trainPath}leftEye/'))//2
-            self.limit = self.cnt + 100
-            os.system('cls')
+        self.cnt = len(os.listdir(f'{self.trainPath}leftEye/'))//2
+        self.limit = self.cnt + 150
+        self.pbar.close()
+        self.pbar = tqdm(total = (self.limit - self.cnt))
+        os.system('cls')
 
     def Run(self):
         ## 영상 추출에 성공했을 때만 반복
@@ -221,9 +257,14 @@ class CaptureFrame:
                 ROI = self.getROI()
                 self.showFrame(*ROI)
                 self.saveFrame(ROI)
-                self.refresh()
-            except Exception as e:
-                print(f'ERROR : {e}')
+                if kb.is_pressed('r'):
+                    self.refresh()
+                if kb.is_pressed('ESC') and kb.is_pressed('q'):
+                    break
+            except :
+                _, _, tb_obj = sys.exc_info()
+                line_num = tb_obj.tb_lineno
+                print(f'Error(lines : {line_num})\n{traceback.format_exc()}')
                 cv2.destroyAllWindows()
                 continue
 
