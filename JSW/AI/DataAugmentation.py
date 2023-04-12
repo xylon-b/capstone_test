@@ -29,6 +29,6 @@ class dataAugmentaion():
         src = Image.fromarray(src)
         return np.array(self.transform(src))
         
-if __name__ == "__main__":
-    DA = dataAugmentaion("./Train DataSet/mouse/")
-    DA.augmentedImagePath()
+# if __name__ == "__main__":
+#     DA = dataAugmentaion("./Train DataSet/mouse/")
+#     DA.augmentedImagePath()

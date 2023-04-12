@@ -33,7 +33,7 @@ class CaptureFrame:
     savePaths = {'1':['_L_OE.jpg','_R_OE.jpg'],'2':['_L_CE.jpg','_R_CE.jpg'],'3':['_M_CM.jpg'],'4':['_M_OM.jpg'],'5':['_M_MSK.jpg']}
     ### 반복 수 체크
     cnt = len(os.listdir(f'{trainPath}leftEye/'))//2
-    limit = cnt + 100
+    limit = cnt + 150
 
     ## 데이터 증강 객체
     DA = dataAugmentaion()
@@ -169,12 +169,13 @@ class CaptureFrame:
         for i, savePath in enumerate(savePaths):
             cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt}{savePath}',Frames[i])
             cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+1}{savePath}', self.DA.augmentationImage(Frames[i]))
+            cv2.imwrite(rf'{self.trainPath}{Names[i]}{self.cnt+2}{savePath}', self.DA.augmentationImage(Frames[i]))
     
     def saveFrame(self, Frames):
         ## 현재 입력된 키가 없을 때만 새로운 키 입력 받음
         if self.key == None:
             self.key = '1' if kb.is_pressed('1') else '2' if kb.is_pressed('2') else '3' if kb.is_pressed('3') else\
-                        '4' if kb.is_pressed('4') else '5' if kb.is_pressed('5') else None
+                        '4' if kb.is_pressed('4') else None
             if self.key != None:
                 print(f'key Click : {self.key}')
         else:
@@ -189,12 +190,12 @@ class CaptureFrame:
                     CalcFrame = lambda x, y : y[:2] if int(x)//3 == 0 else y[2:]
                     ## ROI 이미지 저장
                     self.save(self.frameNames[CalcKey(self.key)],self.key, CalcFrame(self.key,Frames))
-                    self.cnt += 2
+                    self.cnt += 3
                 else : 
                     ## 정해진 횟수 만큼 저장 하였다면
                     ## count 및 key 초기화
                     print('end')
-                    self.cnt -= 100
+                    self.cnt -= 150
                     self.key = None
                 ## 시간 갱신
                 self.T = t.time()
